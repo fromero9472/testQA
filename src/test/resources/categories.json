@@ -1,0 +1,30 @@
+[
+  {
+    "name": "DB Connection Error",
+    "matchedStatuses": ["broken"],
+    "messageRegex": ".*OracleDriver.*|.*Connection refused.*|.*ORA-.*",
+    "traceRegex": ".*DbUtils.*"
+  },
+  {
+    "name": "OCP / Cluster Unreachable",
+    "matchedStatuses": ["broken"],
+    "messageRegex": ".*connect timed out.*|.*Connection refused.*",
+    "traceRegex": ".*ocp-evidence.*"
+  },
+  {
+    "name": "Assertion Failed - Response",
+    "matchedStatuses": ["failed"],
+    "messageRegex": ".*match.*failed.*|.*did not match.*"
+  },
+  {
+    "name": "Assertion Failed - DB",
+    "matchedStatuses": ["failed"],
+    "messageRegex": ".*assert.*|.*null.*credit_profile_id.*"
+  },
+  {
+    "name": "HTTP Error (4xx / 5xx)",
+    "matchedStatuses": ["failed"],
+    "messageRegex": ".*status code was.*"
+  }
+]
+
