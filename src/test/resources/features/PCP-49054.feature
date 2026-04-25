@@ -1,7 +1,6 @@
 Feature: PCP-49054
 
   Background:
-    * url 'https://credit-profile-claropay-ar-desa.apps.osen02.claro.amx'
     * def KIBANA_URL   = 'http://elkkibana02xpl.claro.amx:5602'
     * def KIBANA_USER  = 'desarrollo_claropay'
     * def KIBANA_PASS  = 'Claro2021'

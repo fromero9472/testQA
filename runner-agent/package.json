@@ -1,0 +1,19 @@
+{
+  "name": "testqa-runner-agent",
+  "version": "1.0.0",
+  "description": "Runner Agent — ejecuta features de Karate DSL via HTTP",
+  "main": "agent.js",
+  "scripts": {
+    "start": "node agent.js",
+    "dev": "nodemon agent.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.19.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
+

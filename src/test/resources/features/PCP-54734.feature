@@ -1,7 +1,6 @@
 Feature: PCP-54734
 
   Background:
-    * url 'https://history-credit-profile-batch-claropay-ar-desa.apps.osen02.claro.amx'
     * def DbUtils = Java.type('utils.DbUtils')
 
   # ══════════════════════════════════════════════════════════════════

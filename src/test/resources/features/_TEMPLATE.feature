@@ -5,7 +5,6 @@ Feature: {{FEATURE_NAME}}
 # Fecha:       {{DATE}}
 
   Background:
-    * url '{{BASE_URL}}'
     * def OCP_API   = 'https://api.osen02.claro.amx:6443'
     * def OCP_TOKEN = '{{OCP_TOKEN}}'
     * def NAMESPACE = '{{NAMESPACE}}'
