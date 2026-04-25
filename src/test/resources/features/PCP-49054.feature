@@ -2,9 +2,11 @@ Feature: PCP-49054
 
   Background:
     * url 'https://credit-profile-claropay-ar-desa.apps.osen02.claro.amx'
-    * def OCP_API   = 'https://api.osen02.claro.amx:6443'
-    * def OCP_TOKEN = 'sha256~k0-pa5u7UaJ3amxB1YC3EzV5hkVwWLqKAZ0b3g5IzdU'
-    * def NAMESPACE = 'claropay-ar-desa'
+    * def KIBANA_URL   = 'http://elkkibana02xpl.claro.amx:5602'
+    * def KIBANA_USER  = 'desarrollo_claropay'
+    * def KIBANA_PASS  = 'Claro2021'
+    * def KIBANA_INDEX = 'logstash-*'
+    * def APP_NAME     = 'credit-profile-customer'
     * configure ssl = true
 
   Scenario: Consultar límites de crédito
@@ -30,27 +32,33 @@ Feature: PCP-49054
     And match response.code == 200
     And match response.data.offeredLimit == 5000
 
-    # ── Obtener evidencia de logs OCP (opcional) ───────────────────
-    * configure connectTimeout = 5000
-    * configure readTimeout = 10000
-    * def safeOcpEvidence =
+    # ── Evidencia de logs via Kibana ───────────────────────────────
+    * configure connectTimeout = 8000
+    * configure readTimeout    = 15000
+    * def safeKibanaEvidence =
       """
       function() {
         try {
-          var result = karate.call('classpath:features/ocp-evidence.feature',
-            { OCP_API: OCP_API, OCP_TOKEN: OCP_TOKEN, NAMESPACE: NAMESPACE, logTs: logTs });
+          var result = karate.call('classpath:features/kibana-evidence.feature', {
+            KIBANA_URL:   KIBANA_URL,
+            KIBANA_USER:  KIBANA_USER,
+            KIBANA_PASS:  KIBANA_PASS,
+            KIBANA_INDEX: KIBANA_INDEX,
+            appName:      APP_NAME,
+            logTs:        logTs
+          });
           return result;
         } catch(e) {
-          karate.log('WARN: No se pudo obtener evidencia OCP.');
+          karate.log('WARN: No se pudo obtener evidencia Kibana.');
           karate.log('WARN: Causa -> ' + e.message);
-          karate.log('WARN: Verifique conectividad VPN / red al cluster OpenShift (' + OCP_API + ')');
+          karate.log('WARN: Verifique conectividad y credenciales Kibana (' + KIBANA_URL + ')');
           return null;
         }
       }
       """
-    * def ocpEvidence = safeOcpEvidence()
-    * if (ocpEvidence != null) karate.log('Pod encontrado: ' + ocpEvidence.podName)
-    * if (ocpEvidence != null) karate.log('======= LOG EVIDENCE =======')
-    * if (ocpEvidence != null) karate.log(ocpEvidence.logContent)
-    * if (ocpEvidence != null) karate.log('============================')
-    * if (ocpEvidence == null) karate.log('INFO: Evidencia OCP omitida (sin acceso al cluster).')
+    * def kibanaEvidence = safeKibanaEvidence()
+    * if (kibanaEvidence != null) karate.log('Pod: '                        + kibanaEvidence.podName)
+    * if (kibanaEvidence != null) karate.log('======= KIBANA LOG EVIDENCE =======')
+    * if (kibanaEvidence != null) karate.log(kibanaEvidence.logContent)
+    * if (kibanaEvidence != null) karate.log('===================================')
+    * if (kibanaEvidence == null) karate.log('INFO: Evidencia Kibana omitida (sin acceso o sin configurar).')
