@@ -5,12 +5,12 @@ Feature: Kibana Evidence Gathering
   # Es llamada desde otros features via karate.call() dentro de un bloque try-catch.
 
   Background:
-    * def KIBANA_URL   = karate.get('KIBANA_URL',   'http://elkkibana02xpl.claro.amx:5602')
-    * def KIBANA_USER  = karate.get('KIBANA_USER',  'desarrollo_claropay')
-    * def KIBANA_PASS  = karate.get('KIBANA_PASS',  'Claro2021')
-    * def KIBANA_INDEX = karate.get('KIBANA_INDEX', 'logstash-*')
+    * def KIBANA_URL   = karate.get('KIBANA_URL')
+    * def KIBANA_USER  = karate.get('KIBANA_USER')
+    * def KIBANA_PASS  = karate.get('KIBANA_PASS')
+    * def KIBANA_INDEX = karate.get('KIBANA_INDEX')
     * def logTs        = karate.get('logTs',        '1970-01-01T00:00:00Z')
-    * def appName      = karate.get('appName',      'credit-profile-customer')
+    * def appName      = karate.get('appName', karate.get('APP_NAME'))
 
   Scenario: Obtener logs desde Kibana/Elasticsearch
 

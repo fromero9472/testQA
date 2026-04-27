@@ -34,6 +34,8 @@ build/
 
 ### VS Code ###
 .vscode/
+runner-agent/node_modules/
+runner-agent/.env
 
 ### Mac OS ###
 .DS_Store

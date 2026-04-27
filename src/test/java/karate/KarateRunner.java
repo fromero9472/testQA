@@ -16,14 +16,6 @@ import org.junit.jupiter.api.DisplayName;
 public class KarateRunner {
 
     @Karate.Test
-    @DisplayName("CreditProfileCustomer")
-    @Story("CreditProfileCustomer")
-    @Issue("CreditProfileCustomer")
-    @Severity(SeverityLevel.CRITICAL)
-    Karate CreditProfileCustomer() {
-        return Karate.run("classpath:features/CreditProfileCustomer.feature");
-    }
-    @Karate.Test
     @DisplayName("PCP-47042")
     @Story("PCP-47042")
     @Issue("PCP-47042")

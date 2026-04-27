@@ -7,7 +7,7 @@ const { spawn } = require('child_process');
 
 const app          = express();
 const PORT         = process.env.PORT         || 4000;
-const AGENT_TOKEN  = process.env.AGENT_TOKEN  || 'local-dev-token';
+const AGENT_TOKEN  = process.env.AGENT_TOKEN;
 const RUNNER_PATH  = process.env.RUNNER_PATH;
 const FEATURES_DIR = process.env.FEATURES_DIR;
 const REPORTS_DIR  = process.env.REPORTS_DIR;
@@ -16,6 +16,10 @@ const DEFAULT_ENV  = process.env.DEFAULT_ENV  || 'desa';
 // ─── Validar config al arrancar ───────────────────────────────────────────────
 if (!RUNNER_PATH || !FEATURES_DIR) {
   console.error('\n❌  Falta RUNNER_PATH o FEATURES_DIR en .env\n');
+  process.exit(1);
+}
+if (!AGENT_TOKEN) {
+  console.error('\n❌  Falta AGENT_TOKEN en .env\n');
   process.exit(1);
 }
 if (!fs.existsSync(FEATURES_DIR)) {
@@ -227,9 +231,9 @@ app.get('/report', (_req, res) => {
 });
 
 // ─── POST /run — ejecuta Maven con SSE streaming ──────────────────────────────
-// Body: { featurePath?: string, env?: 'desa' | 'prod' }
+// Body: { featurePath?: string, env?: 'desa' | 'prod', baseUrl?: string, properties?: Record<string,string> }
 app.post('/run', (req, res) => {
-  const { featurePath, baseUrl } = req.body;
+  const { featurePath, baseUrl, properties } = req.body;
   const env = req.body.env || DEFAULT_ENV;
 
   res.setHeader('Content-Type',  'text/event-stream');
@@ -242,11 +246,24 @@ app.post('/run', (req, res) => {
 
   const args = ['test', '-Dtest=KarateRunner', `-Dkarate.env=${env}`];
   if (baseUrl) args.push(`-DbaseUrl=${baseUrl}`);
+  if (properties && typeof properties === 'object' && !Array.isArray(properties)) {
+    Object.entries(properties).forEach(([key, value]) => {
+      const safeKey = String(key || '').trim();
+      if (!safeKey) return;
+      if (!/^[a-zA-Z0-9_.-]+$/.test(safeKey)) return;
+      if (value === undefined || value === null || String(value).trim() === '') return;
+      args.push(`-D${safeKey}=${String(value)}`);
+    });
+  }
   if (featurePath) args.push(`-Dkarate.options=classpath:features/${featurePath}`);
 
   send('info', `🚀 mvn ${args.join(' ')}`);
   send('info', `📁 ${RUNNER_PATH}`);
   send('info', `🌍 Ambiente: ${env}${baseUrl ? ` → ${baseUrl}` : ''}`);
+  if (properties && typeof properties === 'object') {
+    const propKeys = Object.keys(properties).filter(k => /^[a-zA-Z0-9_.-]+$/.test(String(k || '').trim()));
+    if (propKeys.length) send('info', `⚙️ Properties: ${propKeys.join(', ')}`);
+  }
 
   const mvn = spawn('mvn', args, { cwd: RUNNER_PATH, shell: true });
 

@@ -6,9 +6,9 @@ Feature: OCP Evidence Gathering
 
   Background:
     # Cuando se llama vía karate.call() con un mapa de args, esos valores tienen prioridad.
-    * def OCP_API   = karate.get('OCP_API',   'https://api.osen02.claro.amx:6443')
-    * def OCP_TOKEN = karate.get('OCP_TOKEN', 'sha256~k0-pa5u7UaJ3amxB1YC3EzV5hkVwWLqKAZ0b3g5IzdU')
-    * def NAMESPACE = karate.get('NAMESPACE', 'claropay-ar-desa')
+    * def OCP_API   = karate.get('OCP_API')
+    * def OCP_TOKEN = karate.get('OCP_TOKEN')
+    * def NAMESPACE = karate.get('NAMESPACE')
     * def logTs     = karate.get('logTs',     '1970-01-01T00:00:00Z')
 
   Scenario: Obtener logs del pod en OpenShift

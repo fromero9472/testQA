@@ -1,11 +1,11 @@
 Feature: PCP-49054
 
   Background:
-    * def KIBANA_URL   = 'http://elkkibana02xpl.claro.amx:5602'
-    * def KIBANA_USER  = 'desarrollo_claropay'
-    * def KIBANA_PASS  = 'Claro2021'
-    * def KIBANA_INDEX = 'logstash-*'
-    * def APP_NAME     = 'credit-profile-customer'
+    * def KIBANA_URL   = karate.get('KIBANA_URL')
+    * def KIBANA_USER  = karate.get('KIBANA_USER')
+    * def KIBANA_PASS  = karate.get('KIBANA_PASS')
+    * def KIBANA_INDEX = karate.get('KIBANA_INDEX')
+    * def APP_NAME     = karate.get('APP_NAME')
     * configure ssl = true
 
   Scenario: Consultar límites de crédito

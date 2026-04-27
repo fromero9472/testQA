@@ -26,9 +26,9 @@ import java.util.*;
 public class DbUtils {
 
     // ── Configuración por defecto (sobreescribible con -D) ──────────────────
-    private static final String DEFAULT_URL  = System.getProperty("db.url",      "jdbc:oracle:thin:@claropay01atl.claro.amx:1521/ARDCPAY");
-    private static final String DEFAULT_USER = System.getProperty("db.user",     "CPAY_CREDIT_PROFILE");
-    private static final String DEFAULT_PASS = System.getProperty("db.password", "CPAY_CREDIT_PROFILE");
+    private static final String DEFAULT_URL  = System.getProperty("db.url",      "");
+    private static final String DEFAULT_USER = System.getProperty("db.user",     "");
+    private static final String DEFAULT_PASS = System.getProperty("db.password", "");
 
     // ────────────────────────────────────────────────────────────────────────
 
@@ -45,6 +45,7 @@ public class DbUtils {
      * Útil cuando el test necesita conectarse a múltiples bases.
      */
     public static List<Map<String, Object>> queryWith(String url, String user, String pass, String sql) throws Exception {
+        validateConnectionSettings(url, user);
         List<Map<String, Object>> rows = new ArrayList<>();
         try (Connection conn = DriverManager.getConnection(url, user, pass);
              Statement  stmt = conn.createStatement();
@@ -76,9 +77,16 @@ public class DbUtils {
      * Igual que execute() pero con parámetros de conexión explícitos.
      */
     public static int executeWith(String url, String user, String pass, String sql) throws Exception {
+        validateConnectionSettings(url, user);
         try (Connection conn = DriverManager.getConnection(url, user, pass);
              Statement  stmt = conn.createStatement()) {
             return stmt.executeUpdate(sql);
+        }
+    }
+
+    private static void validateConnectionSettings(String url, String user) {
+        if (url == null || url.isBlank() || user == null || user.isBlank()) {
+            throw new IllegalStateException("DB config faltante. Defini -Ddb.url, -Ddb.user y -Ddb.password para ejecutar validaciones de base.");
         }
     }
 

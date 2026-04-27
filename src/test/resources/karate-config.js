@@ -17,6 +17,14 @@ function fn() {
     // ── OCP ──────────────────────────────────────────────────────
     OCP_API:   'https://api.osen02.claro.amx:6443',
     NAMESPACE: 'claropay-ar-desa',
+    OCP_TOKEN: karate.properties['OCP_TOKEN'] || '',
+
+    // ── Kibana ───────────────────────────────────────────────────
+    KIBANA_URL:   karate.properties['KIBANA_URL']   || 'http://elkkibana02xpl.claro.amx:5602',
+    KIBANA_USER:  karate.properties['KIBANA_USER']  || '',
+    KIBANA_PASS:  karate.properties['KIBANA_PASS']  || '',
+    KIBANA_INDEX: karate.properties['KIBANA_INDEX'] || 'logstash-*',
+    APP_NAME:     karate.properties['APP_NAME']     || 'credit-profile-customer',
 
     // ── DB ───────────────────────────────────────────────────────
     DB_SCHEMA: 'CPAY_CREDIT_PROFILE'
