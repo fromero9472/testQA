@@ -456,9 +456,9 @@ function normalizeBaseUrl(url) {
 }
 
 // ─── POST /run — ejecuta Maven con SSE streaming ──────────────────────────────
-// Body: { featurePath?: string, env?: 'desa' | 'prod', baseUrl?: string, properties?: Record<string,string> }
+// Body: { featurePath?: string, scenarioLine?: number, env?: 'desa' | 'prod', baseUrl?: string, properties?: Record<string,string> }
 app.post('/run', (req, res) => {
-  let { featurePath, baseUrl, properties } = req.body;
+  let { featurePath, scenarioLine, baseUrl, properties } = req.body;
   const env = req.body.env || DEFAULT_ENV;
   const startedAt = new Date().toISOString();
 
@@ -484,12 +484,20 @@ app.post('/run', (req, res) => {
       args.push(`-D${safeKey}=${String(value)}`);
     });
   }
-  if (featurePath) args.push(`-Dkarate.options=classpath:features/${featurePath}`);
+  if (featurePath) {
+    const featureOption = Number.isInteger(Number(scenarioLine))
+      ? `classpath:features/${featurePath}:${Number(scenarioLine)}`
+      : `classpath:features/${featurePath}`;
+    args.push(`-Dkarate.options=${featureOption}`);
+  }
 
   send('info', `🚀 ${MAVEN_CMD} ${args.join(' ')}`);
   send('info', `📁 ${RUNNER_PATH}`);
   send('info', `🌍 Ambiente: ${env}`);
   send('info', `🔗 BaseURL: ${baseUrl || 'Sin especificar'}`);
+  if (featurePath && Number.isInteger(Number(scenarioLine))) {
+    send('info', `🎯 Escenario puntual: línea ${Number(scenarioLine)}`);
+  }
   if (RUNNER_JAVA_HOME) send('info', `☕ JAVA_HOME: ${RUNNER_JAVA_HOME}`);
   if (RUNNER_MAVEN_HOME) send('info', `🧰 MAVEN_HOME: ${RUNNER_MAVEN_HOME}`);
   if (properties && typeof properties === 'object') {
