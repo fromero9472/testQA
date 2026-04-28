@@ -4,6 +4,7 @@ const cors      = require('cors');
 const fs        = require('fs');
 const path      = require('path');
 const { spawn } = require('child_process');
+const { parseAllJunitFiles } = require('./karateJunitParser');
 
 const app          = express();
 const PORT         = process.env.PORT         || 4000;
@@ -15,6 +16,7 @@ const DEFAULT_ENV  = process.env.DEFAULT_ENV  || 'desa';
 const RUNNER_JAVA_HOME = process.env.RUNNER_JAVA_HOME || process.env.JAVA_HOME || '';
 const RUNNER_MAVEN_HOME = process.env.RUNNER_MAVEN_HOME || process.env.MAVEN_HOME || '';
 const MAVEN_CMD = process.env.MAVEN_CMD || 'mvn';
+const EVIDENCE_DIR = REPORTS_DIR ? path.join(REPORTS_DIR, 'evidence') : path.join(process.cwd(), 'evidence');
 
 function buildRunnerEnv() {
   const env = { ...process.env };
@@ -32,6 +34,130 @@ function buildRunnerEnv() {
     env.PATH = `${prependPaths.join(path.delimiter)}${path.delimiter}${env.PATH || ''}`;
   }
   return env;
+}
+
+function ensureEvidenceDir() {
+  if (!fs.existsSync(EVIDENCE_DIR)) {
+    fs.mkdirSync(EVIDENCE_DIR, { recursive: true });
+  }
+}
+
+function toScenarioFromJunit(testcase, index) {
+  return {
+    id: `scenario-${index + 1}`,
+    index: index + 1,
+    name: testcase.name || 'Unknown',
+    status: (testcase.status || 'UNKNOWN').toUpperCase(),
+    durationMs: testcase.durationMs || 0,
+    tags: [],
+    featureFile: testcase.classname || 'Sin datos',
+    line: null,
+    steps: [],
+    http: {
+      method: testcase.http?.method || null,
+      url: testcase.http?.url || null,
+      expectedStatus: testcase.http?.expectedStatus ?? null,
+      actualStatus: testcase.http?.actualStatus ?? null,
+      headers: testcase.http?.headers || {},
+      requestBody: testcase.http?.requestBody ?? null,
+      responseBody: testcase.http?.responseBody ?? null,
+    },
+    assertions: Array.isArray(testcase.assertions) ? testcase.assertions : [],
+    testData: {},
+    logs: Array.isArray(testcase.logs) ? testcase.logs : [],
+    db: testcase.db || { query: null, result: null },
+    error: testcase.error ? {
+      message: testcase.error.message || 'Test failed',
+      stack: testcase.error.stack || '',
+    } : null,
+  };
+}
+
+function mapKarateReport(rawKarateJson, ctx = {}) {
+  const scenariosPassed = Number(rawKarateJson?.scenariosPassed || 0);
+  const scenariosFailed = Number(rawKarateJson?.scenariosFailed || rawKarateJson?.scenariosfailed || 0);
+  const scenariosSkipped = Number(rawKarateJson?.scenariosSkipped || 0);
+  const total = scenariosPassed + scenariosFailed + scenariosSkipped;
+  const durationMs = Math.round(Number(rawKarateJson?.elapsedTime || 0) * 1000);
+  const finishedAt = new Date().toISOString();
+  const startedAt = ctx.startedAt || finishedAt;
+  const executionId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  return {
+    executionId,
+    featureName: ctx.featureName || rawKarateJson?.featureName || 'Sin datos',
+    environment: rawKarateJson?.env || ctx.environment || DEFAULT_ENV,
+    baseUrl: ctx.baseUrl || process.env.DEFAULT_BASE_URL || 'Sin datos',
+    status: scenariosFailed > 0 ? 'FAILED' : 'PASSED',
+    startedAt,
+    finishedAt,
+    durationMs,
+    summary: {
+      total,
+      passed: scenariosPassed,
+      failed: scenariosFailed,
+      skipped: scenariosSkipped,
+      error: 0,
+      successRate: total > 0 ? Math.round((scenariosPassed / total) * 100) : 0,
+    },
+    scenarios: [],
+  };
+}
+
+function saveExecutionEvidence(report) {
+  ensureEvidenceDir();
+  fs.writeFileSync(path.join(EVIDENCE_DIR, `${report.executionId}.json`), JSON.stringify(report, null, 2), 'utf8');
+  fs.writeFileSync(path.join(EVIDENCE_DIR, 'latest.json'), JSON.stringify(report, null, 2), 'utf8');
+}
+
+function scenarioToHtml(s) {
+  const requestBody = s.http?.requestBody == null ? 'Sin datos' : JSON.stringify(s.http.requestBody, null, 2);
+  const responseBody = s.http?.responseBody == null ? 'Sin datos' : JSON.stringify(s.http.responseBody, null, 2);
+  const errorText = s.error?.message || 'Sin datos';
+  const stackText = s.error?.stack || 'Sin datos';
+  return `
+    <details class="scenario">
+      <summary><b>#${s.index}</b> ${s.name} <span class="badge ${String(s.status || 'UNKNOWN').toLowerCase()}">${s.status}</span></summary>
+      <div class="grid">
+        <div><b>Duracion:</b> ${s.durationMs}ms</div>
+        <div><b>Metodo:</b> ${s.http?.method || 'Sin datos'}</div>
+        <div><b>URL:</b> ${s.http?.url || 'Sin datos'}</div>
+        <div><b>Status esperado:</b> ${s.http?.expectedStatus ?? 'Sin datos'}</div>
+        <div><b>Status obtenido:</b> ${s.http?.actualStatus ?? 'Sin datos'}</div>
+      </div>
+      <h4>Request</h4><pre>${requestBody}</pre>
+      <h4>Response</h4><pre>${responseBody}</pre>
+      <h4>Error</h4><pre>${errorText}</pre>
+      <h4>Stack</h4><pre>${stackText}</pre>
+    </details>
+  `;
+}
+
+function buildHtmlReport(report) {
+  const scenariosHtml = (report.scenarios || []).map(scenarioToHtml).join('\n');
+  return `<!doctype html>
+<html><head><meta charset="utf-8"><title>Reporte ${report.executionId}</title>
+<style>
+body{background:#0b1220;color:#dbe3f4;font-family:Segoe UI,Arial,sans-serif;padding:24px}
+.cards{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:10px}
+.card{background:#121b2f;border:1px solid #26324a;border-radius:8px;padding:12px}
+.scenario{background:#121b2f;border:1px solid #26324a;border-radius:8px;padding:8px;margin:8px 0}
+.badge{padding:2px 8px;border-radius:999px}
+.passed{background:#143d28}.failed{background:#4a1d1d}.skipped{background:#3f3f3f}.error{background:#4b2b14}
+pre{background:#0f1729;border:1px solid #22304a;padding:8px;border-radius:6px;white-space:pre-wrap}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(160px,1fr));gap:8px;margin:8px 0}
+</style></head><body>
+<h1>Reporte de Ejecucion</h1>
+<div class="cards">
+<div class="card"><b>Feature</b><div>${report.featureName}</div></div>
+<div class="card"><b>Estado</b><div>${report.status}</div></div>
+<div class="card"><b>Total</b><div>${report.summary.total}</div></div>
+<div class="card"><b>Passed</b><div>${report.summary.passed}</div></div>
+<div class="card"><b>Failed</b><div>${report.summary.failed}</div></div>
+</div>
+<h2>Escenarios</h2>
+${scenariosHtml || '<p>Sin datos</p>'}
+</body></html>`;
 }
 
 // ─── Validar config al arrancar ───────────────────────────────────────────────
@@ -260,11 +386,70 @@ app.get('/report', (_req, res) => {
   }
 });
 
+app.get('/reports/latest', (_req, res) => {
+  try {
+    const latestPath = path.join(EVIDENCE_DIR, 'latest.json');
+    if (!fs.existsSync(latestPath)) return res.status(404).json({ success: false, error: 'No hay reportes' });
+    res.json({ success: true, report: JSON.parse(fs.readFileSync(latestPath, 'utf8')) });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/reports/:executionId', (req, res) => {
+  try {
+    const filePath = path.join(EVIDENCE_DIR, `${req.params.executionId}.json`);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, error: 'Reporte no encontrado' });
+    res.json({ success: true, report: JSON.parse(fs.readFileSync(filePath, 'utf8')) });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/reports/:executionId/scenarios/:scenarioId', (req, res) => {
+  try {
+    const filePath = path.join(EVIDENCE_DIR, `${req.params.executionId}.json`);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, error: 'Reporte no encontrado' });
+    const report = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const scenario = (report.scenarios || []).find((s) => String(s.id) === String(req.params.scenarioId));
+    if (!scenario) return res.status(404).json({ success: false, error: 'Escenario no encontrado' });
+    res.json({ success: true, scenario });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/reports/:executionId/download/json', (req, res) => {
+  try {
+    const filePath = path.join(EVIDENCE_DIR, `${req.params.executionId}.json`);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, error: 'Reporte no encontrado' });
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename=\"report-${req.params.executionId}.json\"`);
+    res.send(fs.readFileSync(filePath, 'utf8'));
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/reports/:executionId/download/html', (req, res) => {
+  try {
+    const filePath = path.join(EVIDENCE_DIR, `${req.params.executionId}.json`);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, error: 'Reporte no encontrado' });
+    const report = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=\"report-${req.params.executionId}.html\"`);
+    res.send(buildHtmlReport(report));
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ─── POST /run — ejecuta Maven con SSE streaming ──────────────────────────────
 // Body: { featurePath?: string, env?: 'desa' | 'prod', baseUrl?: string, properties?: Record<string,string> }
 app.post('/run', (req, res) => {
   const { featurePath, baseUrl, properties } = req.body;
   const env = req.body.env || DEFAULT_ENV;
+  const startedAt = new Date().toISOString();
 
   res.setHeader('Content-Type',  'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -326,9 +511,53 @@ app.post('/run', (req, res) => {
     try {
       const summaryPath = path.join(REPORTS_DIR, 'karate-summary-json.txt');
       if (fs.existsSync(summaryPath)) {
-        summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+        const rawKarateJson = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+
+        // DEBUG: Log de lo que Karate envía
+        send('log', `📊 Karate JSON keys: ${Object.keys(rawKarateJson).join(', ')}`);
+        send('log', `📊 ¿Tiene scenarios?: ${rawKarateJson.scenarios ? 'SÍ (' + rawKarateJson.scenarios.length + ')' : 'NO'}`);
+
+        // MAPEAR formato Karate al formato QATestUI esperado
+        summary = mapKarateReport(rawKarateJson, {
+          startedAt,
+          environment: env,
+          baseUrl,
+          featureName: featurePath || 'all-features',
+        });
+
+        send('log', `✅ Estructura mapeada: status=${summary.status}, total=${summary.summary.total}`);
+
+        // FASE 2: Enriquecer con datos del JUnit XML
+        try {
+          const junitDir = path.join(RUNNER_PATH, 'target', 'surefire-reports');
+          send('log', `📁 Buscando JUnit XML en: ${junitDir}`);
+          send('log', `📁 ¿Existe el directorio?: ${fs.existsSync(junitDir)}`);
+
+          if (fs.existsSync(junitDir)) {
+            const files = fs.readdirSync(junitDir);
+            send('log', `📁 Archivos en surefire-reports: ${files.join(', ')}`);
+          }
+
+          const junitTestcases = parseAllJunitFiles(junitDir);
+
+          send('log', `📊 JUnit testcases encontrados: ${junitTestcases.length}`);
+          if (junitTestcases.length > 0) {
+            send('log', `✅ Primer testcase: ${junitTestcases[0].name}`);
+            summary.scenarios = junitTestcases.map((tc, i) => toScenarioFromJunit(tc, i));
+            send('log', `✅ Scenarios mapeados: ${summary.scenarios.length}`);
+          } else {
+            send('log', `⚠️ No se encontraron testcases en el XML`);
+          }
+        } catch (enrichErr) {
+          console.warn('⚠️ No se pudo enriquecer con JUnit XML:', enrichErr.message);
+          send('log', `⚠️ Error en enrichment: ${enrichErr.message}`);
+          send('log', `⚠️ Stack: ${enrichErr.stack}`);
+        }
       }
-    } catch { /* ignorar si falla la lectura del reporte */ }
+      if (summary) saveExecutionEvidence(summary);
+    } catch (err) {
+      send('log', `⚠️ Error al leer reporte: ${err.message}`);
+    }
 
     send('done', {
       exitCode: code,

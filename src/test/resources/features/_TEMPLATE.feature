@@ -1,5 +1,5 @@
 Feature: {{FEATURE_NAME}}
-# DescripciÃ³n: {{FEATURE_DESCRIPTION}}
+# Descripcion: {{FEATURE_DESCRIPTION}}
 # Endpoint:    {{METHOD}} {{BASE_PATH}}
 # Autor:       {{AUTHOR}}
 # Fecha:       {{DATE}}
@@ -11,46 +11,46 @@ Feature: {{FEATURE_NAME}}
     * url baseUrl
     * configure ssl = true
 
-  # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  # =============================================================================================
   # SCENARIO: Happy Path
-  # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  # =============================================================================================
   Scenario: {{TICKET_ID}} - {{SCENARIO_DESCRIPTION}}
 
-    # â”€â”€ Timestamp para evidencia de logs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Timestamp para evidencia de logs --
     * def logTs = java.time.Instant.now().toString()
     * karate.log('Log capture desde: ' + logTs)
 
-    # â”€â”€ [OPCIONAL] Estado DB ANTES del request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- [OPCIONAL] Estado DB ANTES del request --
     # * def DbUtils = Java.type('utils.DbUtils')
     # * def dbBefore = DbUtils.queryOne("SELECT {{DB_COLUMNS}} FROM CPAY_CREDIT_PROFILE.{{DB_TABLE}} WHERE {{DB_FILTER}}")
     # * karate.log('DB ANTES: ' + dbBefore)
 
-    # â”€â”€ Headers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Headers --
     Given path '{{ENDPOINT_PATH}}'
     And header Content-Type = 'application/json'
-    # And header Authorization = 'Bearer {{TOKEN}}'   # descomentÃ¡ si requiere auth
+    # And header Authorization = 'Bearer {{TOKEN}}'   # descomenta si requiere auth
 
-    # â”€â”€ Request Body â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Request Body --
     And request
     """
     {{REQUEST_BODY}}
     """
 
-    # â”€â”€ Execution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Execution --
     When method {{HTTP_METHOD}}
 
-    # â”€â”€ Assertions de respuesta â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Assertions de respuesta --
     Then status {{EXPECTED_STATUS}}
     And match response.message == '{{EXPECTED_MESSAGE}}'
     # And match response.{{FIELD}} == '{{EXPECTED_VALUE}}'
     # And match response == {message: '{{EXPECTED_MESSAGE}}', data: '#notnull'}
 
-    # â”€â”€ [OPCIONAL] Estado DB DESPUÃ‰S del request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- [OPCIONAL] Estado DB DESPUES del request --
     # * def dbAfter = DbUtils.queryOne("SELECT {{DB_COLUMNS}} FROM CPAY_CREDIT_PROFILE.{{DB_TABLE}} WHERE {{DB_FILTER}}")
     # * karate.log('DB DESPUES: ' + dbAfter)
     # * match dbAfter.{{DB_COLUMN}} == '{{DB_EXPECTED_VALUE}}'
 
-    # â”€â”€ [OPCIONAL] Evidencia de logs OCP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- [OPCIONAL] Evidencia de logs OCP --
     # * configure connectTimeout = 5000
     # * configure readTimeout    = 10000
     # * def safeOcpEvidence =
@@ -72,9 +72,9 @@ Feature: {{FEATURE_NAME}}
     # * if (ocpEvidence == null) karate.log('INFO: Evidencia OCP omitida (sin acceso al cluster).')
 
 
-  # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  # SCENARIO: Error / ValidaciÃ³n negativa
-  # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  # =============================================================================================
+  # SCENARIO: Error / Validacion negativa
+  # =============================================================================================
   # Scenario: {{TICKET_ID}} - {{SCENARIO_DESCRIPTION_ERROR}}
   #
   #   Given path '{{ENDPOINT_PATH}}'
@@ -86,5 +86,4 @@ Feature: {{FEATURE_NAME}}
   #   When method {{HTTP_METHOD}}
   #   Then status {{EXPECTED_ERROR_STATUS}}
   #   And match response.message == '{{EXPECTED_ERROR_MESSAGE}}'
-
 

@@ -9,13 +9,13 @@ Feature: PCP-47042
     * url baseUrl
     * configure ssl = true
 
-  Scenario: Ingresar con cuitPay vÃ¡lido
+  Scenario: Ingresar con cuitPay valido
 
-    # â”€â”€ Capturar timestamp ANTES del request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Capturar timestamp ANTES del request --
     * def logTs = java.time.Instant.now().toString()
     * karate.log('Log capture desde: ' + logTs)
 
-    # â”€â”€ Request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Request --
     Given path '/credit-profile/v1/limits/pay'
     And header Content-Type = 'application/json'
     And request
@@ -23,15 +23,15 @@ Feature: PCP-47042
     {"cuitPay": 2733224455}
     """
 
-    # â”€â”€ Execution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Execution --
     When method POST
 
-    # â”€â”€ Assertions de respuesta â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Assertions de respuesta --
     Then status 200
     And match response.code == 200
     And match response.message == 'LIMIT_PAY_OK'
 
-    # â”€â”€ Evidencia de logs via Kibana â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Evidencia de logs via Kibana --
     * configure connectTimeout = 8000
     * configure readTimeout    = 15000
     * def safeKibanaEvidence =
@@ -57,13 +57,13 @@ Feature: PCP-47042
     * if (kibanaEvidence == null) karate.log('INFO: Evidencia Kibana omitida.')
 
 
-  Scenario: Ingresar con cuitPay invÃ¡lido
+  Scenario: Ingresar con cuitPay invalido
 
-    # â”€â”€ Capturar timestamp ANTES del request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Capturar timestamp ANTES del request --
     * def logTs = java.time.Instant.now().toString()
     * karate.log('Log capture desde: ' + logTs)
 
-    # â”€â”€ Request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Request --
     Given path '/credit-profile/v1/limits/pay'
     And header Content-Type = 'application/json'
     And request
@@ -71,15 +71,15 @@ Feature: PCP-47042
     {"cuitPay": 202001}
     """
 
-    # â”€â”€ Execution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Execution --
     When method POST
 
-    # â”€â”€ Assertions de respuesta â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Assertions de respuesta --
     Then status 400
     And match response.code == 400
     And match response.message == 'LIMIT_PAY_BAD_REQUEST'
 
-    # â”€â”€ Evidencia de logs via Kibana â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Evidencia de logs via Kibana --
     * configure connectTimeout = 8000
     * configure readTimeout    = 15000
     * def safeKibanaEvidence =
