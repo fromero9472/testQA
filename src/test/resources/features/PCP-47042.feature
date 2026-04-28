@@ -6,15 +6,16 @@ Feature: PCP-47042
     * def KIBANA_PASS  = karate.get('KIBANA_PASS')
     * def KIBANA_INDEX = karate.get('KIBANA_INDEX')
     * def APP_NAME     = karate.get('APP_NAME')
+    * url baseUrl
     * configure ssl = true
 
-  Scenario: Ingresar con cuitPay válido
+  Scenario: Ingresar con cuitPay vÃ¡lido
 
-    # ── Capturar timestamp ANTES del request ───────────────────────
+    # â”€â”€ Capturar timestamp ANTES del request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     * def logTs = java.time.Instant.now().toString()
     * karate.log('Log capture desde: ' + logTs)
 
-    # ── Request ────────────────────────────────────────────────────
+    # â”€â”€ Request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Given path '/credit-profile/v1/limits/pay'
     And header Content-Type = 'application/json'
     And request
@@ -22,15 +23,15 @@ Feature: PCP-47042
     {"cuitPay": 2733224455}
     """
 
-    # ── Execution ──────────────────────────────────────────────────
+    # â”€â”€ Execution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     When method POST
 
-    # ── Assertions de respuesta ────────────────────────────────────
+    # â”€â”€ Assertions de respuesta â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Then status 200
     And match response.code == 200
     And match response.message == 'LIMIT_PAY_OK'
 
-    # ── Evidencia de logs via Kibana ───────────────────────────────
+    # â”€â”€ Evidencia de logs via Kibana â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     * configure connectTimeout = 8000
     * configure readTimeout    = 15000
     * def safeKibanaEvidence =
@@ -56,13 +57,13 @@ Feature: PCP-47042
     * if (kibanaEvidence == null) karate.log('INFO: Evidencia Kibana omitida.')
 
 
-  Scenario: Ingresar con cuitPay inválido
+  Scenario: Ingresar con cuitPay invÃ¡lido
 
-    # ── Capturar timestamp ANTES del request ───────────────────────
+    # â”€â”€ Capturar timestamp ANTES del request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     * def logTs = java.time.Instant.now().toString()
     * karate.log('Log capture desde: ' + logTs)
 
-    # ── Request ────────────────────────────────────────────────────
+    # â”€â”€ Request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Given path '/credit-profile/v1/limits/pay'
     And header Content-Type = 'application/json'
     And request
@@ -70,15 +71,15 @@ Feature: PCP-47042
     {"cuitPay": 202001}
     """
 
-    # ── Execution ──────────────────────────────────────────────────
+    # â”€â”€ Execution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     When method POST
 
-    # ── Assertions de respuesta ────────────────────────────────────
+    # â”€â”€ Assertions de respuesta â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     Then status 400
     And match response.code == 400
     And match response.message == 'LIMIT_PAY_BAD_REQUEST'
 
-    # ── Evidencia de logs via Kibana ───────────────────────────────
+    # â”€â”€ Evidencia de logs via Kibana â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     * configure connectTimeout = 8000
     * configure readTimeout    = 15000
     * def safeKibanaEvidence =
@@ -102,3 +103,4 @@ Feature: PCP-47042
     * if (kibanaEvidence != null) karate.log(kibanaEvidence.logContent)
     * if (kibanaEvidence != null) karate.log('===================================')
     * if (kibanaEvidence == null) karate.log('INFO: Evidencia Kibana omitida.')
+

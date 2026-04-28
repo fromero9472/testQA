@@ -12,6 +12,27 @@ const RUNNER_PATH  = process.env.RUNNER_PATH;
 const FEATURES_DIR = process.env.FEATURES_DIR;
 const REPORTS_DIR  = process.env.REPORTS_DIR;
 const DEFAULT_ENV  = process.env.DEFAULT_ENV  || 'desa';
+const RUNNER_JAVA_HOME = process.env.RUNNER_JAVA_HOME || process.env.JAVA_HOME || '';
+const RUNNER_MAVEN_HOME = process.env.RUNNER_MAVEN_HOME || process.env.MAVEN_HOME || '';
+const MAVEN_CMD = process.env.MAVEN_CMD || 'mvn';
+
+function buildRunnerEnv() {
+  const env = { ...process.env };
+
+  const prependPaths = [];
+  if (RUNNER_JAVA_HOME) {
+    env.JAVA_HOME = RUNNER_JAVA_HOME;
+    prependPaths.push(path.join(RUNNER_JAVA_HOME, 'bin'));
+  }
+  if (RUNNER_MAVEN_HOME) {
+    env.MAVEN_HOME = RUNNER_MAVEN_HOME;
+    prependPaths.push(path.join(RUNNER_MAVEN_HOME, 'bin'));
+  }
+  if (prependPaths.length) {
+    env.PATH = `${prependPaths.join(path.delimiter)}${path.delimiter}${env.PATH || ''}`;
+  }
+  return env;
+}
 
 // ─── Validar config al arrancar ───────────────────────────────────────────────
 if (!RUNNER_PATH || !FEATURES_DIR) {
@@ -32,10 +53,16 @@ app.use(express.json());
 
 // ─── Auth por token (header x-agent-token) ────────────────────────────────────
 app.use((req, res, next) => {
+  console.log(`[Auth] Recibida petición para: ${req.path}`);
+  const receivedToken = req.headers['x-agent-token'];
+  console.log(`[Auth] Token recibido: ${receivedToken ? 'sí' : 'no'}`);
+
   if (req.path === '/health') return next();
-  if (req.headers['x-agent-token'] !== AGENT_TOKEN) {
+  if (receivedToken !== AGENT_TOKEN) {
+    console.error('[Auth] ❌ Token inválido o ausente. Rechazando petición.');
     return res.status(401).json({ success: false, error: 'Unauthorized' });
   }
+  console.log('[Auth] ✅ Token válido. Petición autorizada.');
   next();
 });
 
@@ -45,6 +72,9 @@ app.get('/health', (_req, res) => res.json({
   agent:      'TestQA Runner Agent',
   runnerPath: RUNNER_PATH,
   defaultEnv: DEFAULT_ENV,
+  javaHome:   RUNNER_JAVA_HOME || null,
+  mavenHome:  RUNNER_MAVEN_HOME || null,
+  mavenCmd:   MAVEN_CMD,
 }));
 
 // ─── GET /features — lista todos los .feature ─────────────────────────────────
@@ -257,15 +287,21 @@ app.post('/run', (req, res) => {
   }
   if (featurePath) args.push(`-Dkarate.options=classpath:features/${featurePath}`);
 
-  send('info', `🚀 mvn ${args.join(' ')}`);
+  send('info', `🚀 ${MAVEN_CMD} ${args.join(' ')}`);
   send('info', `📁 ${RUNNER_PATH}`);
   send('info', `🌍 Ambiente: ${env}${baseUrl ? ` → ${baseUrl}` : ''}`);
+  if (RUNNER_JAVA_HOME) send('info', `☕ JAVA_HOME: ${RUNNER_JAVA_HOME}`);
+  if (RUNNER_MAVEN_HOME) send('info', `🧰 MAVEN_HOME: ${RUNNER_MAVEN_HOME}`);
   if (properties && typeof properties === 'object') {
     const propKeys = Object.keys(properties).filter(k => /^[a-zA-Z0-9_.-]+$/.test(String(k || '').trim()));
     if (propKeys.length) send('info', `⚙️ Properties: ${propKeys.join(', ')}`);
   }
 
-  const mvn = spawn('mvn', args, { cwd: RUNNER_PATH, shell: true });
+  const mvn = spawn(MAVEN_CMD, args, {
+    cwd: RUNNER_PATH,
+    shell: true,
+    env: buildRunnerEnv(),
+  });
 
   const pipe = (type) => (chunk) =>
     chunk.toString().split('\n')
