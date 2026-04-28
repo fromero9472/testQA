@@ -444,12 +444,26 @@ app.get('/reports/:executionId/download/html', (req, res) => {
   }
 });
 
+// ─── Helper: normalizar baseUrl ───────────────────────────────────────────────
+function normalizeBaseUrl(url) {
+  if (!url) return null;
+  url = String(url).trim();
+  if (!url) return null;
+  // Si ya tiene protocolo, devolver tal cual
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  // Si es localhost:puerto o similar, agregar http://
+  return `http://${url}`;
+}
+
 // ─── POST /run — ejecuta Maven con SSE streaming ──────────────────────────────
 // Body: { featurePath?: string, env?: 'desa' | 'prod', baseUrl?: string, properties?: Record<string,string> }
 app.post('/run', (req, res) => {
-  const { featurePath, baseUrl, properties } = req.body;
+  let { featurePath, baseUrl, properties } = req.body;
   const env = req.body.env || DEFAULT_ENV;
   const startedAt = new Date().toISOString();
+
+  // Normalizar baseUrl: agregar http:// si no tiene protocolo
+  baseUrl = normalizeBaseUrl(baseUrl);
 
   res.setHeader('Content-Type',  'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -474,7 +488,8 @@ app.post('/run', (req, res) => {
 
   send('info', `🚀 ${MAVEN_CMD} ${args.join(' ')}`);
   send('info', `📁 ${RUNNER_PATH}`);
-  send('info', `🌍 Ambiente: ${env}${baseUrl ? ` → ${baseUrl}` : ''}`);
+  send('info', `🌍 Ambiente: ${env}`);
+  send('info', `🔗 BaseURL: ${baseUrl || 'Sin especificar'}`);
   if (RUNNER_JAVA_HOME) send('info', `☕ JAVA_HOME: ${RUNNER_JAVA_HOME}`);
   if (RUNNER_MAVEN_HOME) send('info', `🧰 MAVEN_HOME: ${RUNNER_MAVEN_HOME}`);
   if (properties && typeof properties === 'object') {

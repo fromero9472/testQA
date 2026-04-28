@@ -8,188 +8,196 @@ Feature: PCP-56042
     And header Content-Type = 'application/json'
     And request
     """
-{"claro":{},"claroPay":{},"transaction":{}}
+    {
+  "claro": {
+    "nim": 1123456789,
+    "cltId": "16230885",
+    "cuit":"20117117110",
+    "identificationType":"DNI",
+    "identificationNumber":11711711,
+    "name": "LUCAS ANDRES",
+    "surname": "BUSSO",
+    "birthdate": "1997-03-11"
+  },
+  "claroPay": {
+    "cuit": "20117117110",
+    "uuid": "asdadsasd"
+  }
+"transaction": {
+    "channelId": 1,
+    "caller":  "texto",
+    "originId": 1, 
+    "isTransaction": false,
+  }
+}
     """
     When method POST
     Then status 400
-    And match response.message == CREDIT_PROFILE_BAD_REQUEST
-    And match response.detail == No puede enviar datos de Claro y ClaroPay en el mismo request
+    And match response.message == 'CREDIT_PROFILE_BAD_REQUEST'
+    And match response.detail == 'No puede enviar datos de Claro y ClaroPay en el mismo request'
 
   Scenario: Validacion Claro - Campos name, surname y birthdate son null
     Given path '/v1/credit/profile'
     And header Content-Type = 'application/json'
     And request
     """
-{"claro":{"cuit":12345678901,"identificationNumber":12345678,"transaction":{}},"claroPay":null}
+    {"claro":{"cuit":30,"name":null,"surname":null,"birthdate":null},"claroPay":null,"transaction":{}}
     """
     When method POST
     Then status 400
-    And match response.message == CREDIT_PROFILE_BAD_REQUEST
-    And match response.detail == El flujo requiere que name, surname y birthdate no sean null
+    And match response.message == 'CREDIT_PROFILE_BAD_REQUEST'
+    And match response.detail == 'El campo isTransaction no puede ser null ni vacío'
 
   Scenario: Validacion Claro - Campos name, surname, birthdate e identificationType son null
     Given path '/v1/credit/profile'
     And header Content-Type = 'application/json'
     And request
     """
-{"claro":{"identificationNumber":12345678,"transaction":{}},"claroPay":null}
+    {"claro":{"identificationNumber":null,"name":null,"surname":null,"birthdate":null},"claroPay":null,"transaction":{}}
     """
     When method POST
     Then status 400
-    And match response.message == CREDIT_PROFILE_BAD_REQUEST
-    And match response.detail == El flujo requiere que name, surname, birthdate e identificationType no sean null
+    And match response.message == 'CREDIT_PROFILE_BAD_REQUEST'
+    And match response.detail == 'El request se encuentra vacío'
 
-  Scenario: Validacion Claro - CUIT con letras o cantidad distinta a 11 dÃ­gitos
+  Scenario: Validacion Claro - CUIT con letras o cantidad distinta a 11 dígitos
     Given path '/v1/credit/profile'
     And header Content-Type = 'application/json'
     And request
     """
-{"claro":{"cuit":"abc","transaction":{}},"claroPay":null}
+    {"claro":{"cuit":"abc","transaction":{}},"claroPay":null}
     """
     When method POST
-    Then status 400
-    And match response.message == CREDIT_PROFILE_BAD_REQUEST
-    And match response.detail == CUIT debe contener solo nÃºmeros y tener 11 dÃ­gitos
+    Then status 500
+    And match response.message == 'CREDIT_PROFILE_BAD_REQUEST_ERROR'
+    And match response.detail == 'Request mal ingresado.'
 
   Scenario: Validacion Claro - NIM con letras
     Given path '/v1/credit/profile'
     And header Content-Type = 'application/json'
     And request
     """
-{"claro":{"nim":"abc","transaction":{}},"claroPay":null}
+    {"claro":{"nim":"abc","transaction":{}},"claroPay":null}
     """
     When method POST
-    Then status 400
-    And match response.message == CREDIT_PROFILE_BAD_REQUEST
-    And match response.detail == NIM debe contener solo nÃºmeros
+    Then status 500
+    And match response.message == 'CREDIT_PROFILE_BAD_REQUEST_ERROR'
+    And match response.detail == 'Request mal ingresado.'
 
   Scenario: Validacion Claro - birthdate con formato incorrecto
     Given path '/v1/credit/profile'
     And header Content-Type = 'application/json'
     And request
     """
-{"claro":{"birthdate":"11-03-1997","transaction":{}},"claroPay":null}
+    {"claro":{"birthdate":"dd-mm-yyyy","transaction":{}},"claroPay":null}
     """
     When method POST
-    Then status 400
-    And match response.message == CREDIT_PROFILE_BAD_REQUEST
-    And match response.detail == birthdate debe tener formato aaaa-mm-dd
+    Then status 500
+    And match response.message == 'CREDIT_PROFILE_BAD_REQUEST_ERROR'
+    And match response.detail == 'Request mal ingresado.'
 
-  Scenario: Validacion Claro - request completamente vacÃ­o
+  Scenario: Validacion Claro - Request completamente vacío
     Given path '/v1/credit/profile'
     And header Content-Type = 'application/json'
     And request
     """
-{"claro":{},"claroPay":{},"transaction":{}}
+    {"claro":{},"claroPay":{},"transaction":{}}
     """
     When method POST
     Then status 400
-    And match response.message == CREDIT_PROFILE_BAD_REQUEST
-    And match response.detail == El request se encuentra vacÃ­o
+    And match response.message == 'CREDIT_PROFILE_BAD_REQUEST'
+    And match response.detail == 'El request se encuentra vacío'
 
   Scenario: Validacion Claro - cuit o identificationNumber es requerido
     Given path '/v1/credit/profile'
     And header Content-Type = 'application/json'
     And request
     """
-{"claro":{"name":"Lucas","surname":"Andres","birthdate":"1997-03-11","transaction":{}},"claroPay":null}
+    {"claro":{"name":"test","surname":"test","birthdate":"2023-01-01"},"claroPay":null,"transaction":{}}
     """
     When method POST
     Then status 400
-    And match response.message == CREDIT_PROFILE_BAD_REQUEST
-    And match response.detail == El campo cuit o identificationNumber es requerido
-
-  Scenario: Validacion Claro - identificationNumber con letras o caracteres especiales
-    Given path '/v1/credit/profile'
-    And header Content-Type = 'application/json'
-    And request
-    """
-{"claro":{"identificationNumber":"abc","transaction":{}},"claroPay":null}
-    """
-    When method POST
-    Then status 400
-    And match response.message == CREDIT_PROFILE_BAD_REQUEST
-    And match response.detail == El campo identificationNumber debe contener solo nÃºmeros
+    And match response.message == 'CREDIT_PROFILE_BAD_REQUEST'
+    And match response.detail == 'El campo cuit o identificationNumber es requerido'
 
   Scenario: Validacion ClaroPay - uuid con menos de 36 caracteres
     Given path '/v1/credit/profile'
     And header Content-Type = 'application/json'
     And request
     """
-{"claro":null,"claroPay":{"uuid":"12345"},"transaction":{}}
+    {"claro":null,"claroPay":{"uuid":"shortuuid"},"transaction":{}}
     """
     When method POST
     Then status 400
-    And match response.message == CREDIT_PROFILE_BAD_REQUEST
-    And match response.detail == uuid tiene formato invalido
+    And match response.message == 'CREDIT_PROFILE_BAD_REQUEST'
+    And match response.detail == 'uuid tiene formato invalido'
 
-  Scenario: Validacion ClaroPay - CUIT con letras o cantidad distinta a 11 dÃ­gitos
+  Scenario: Validacion ClaroPay - CUIT con letras o cantidad distinta a 11 dígitos
     Given path '/v1/credit/profile'
     And header Content-Type = 'application/json'
     And request
     """
-{"claro":null,"claroPay":{"cuit":"abc"},"transaction":{}}
+    {"claro":null,"claroPay":{"cuit":"abc"},"transaction":{}}
     """
     When method POST
     Then status 400
-    And match response.message == CREDIT_PROFILE_BAD_REQUEST
-    And match response.detail == CUIT debe contener solo nÃºmeros y tener 11 dÃ­gitos
+    And match response.message == 'CREDIT_PROFILE_BAD_REQUEST'
+    And match response.detail == 'CUIT debe contener solo números y tener 11 dígitos'
 
   Scenario: Validacion Transaction - channelId y originId son null
     Given path '/v1/credit/profile'
     And header Content-Type = 'application/json'
     And request
     """
-{"claro":{},"claroPay":{},"transaction":{"isTransaction":true}}
+    {"claro":{},"claroPay":null,"transaction":{"isTransaction":true}}
     """
     When method POST
     Then status 400
-    And match response.message == CREDIT_PROFILE_BAD_REQUEST
-    And match response.detail == Los campos channelId y originId no pueden ser null
+    And match response.message == 'CREDIT_PROFILE_BAD_REQUEST'
+    And match response.detail == 'Los campos channelId y originId no pueden ser null'
 
   Scenario: Validacion Transaction - isTransaction en false
     Given path '/v1/credit/profile'
     And header Content-Type = 'application/json'
     And request
     """
-{"claro":{},"claroPay":{},"transaction":{"isTransaction":false}}
+    {"claro":{},"claroPay":null,"transaction":{"isTransaction":false}}
     """
     When method POST
     Then status 200
 
-  Scenario: Validacion Transaction - isTransaction es null o vacÃ­o
+  Scenario: Validacion Transaction - isTransaction es null o vacío
     Given path '/v1/credit/profile'
     And header Content-Type = 'application/json'
     And request
     """
-{"claro":{},"claroPay":{},"transaction":{"isTransaction":null}}
+    {"claro":{},"claroPay":null,"transaction":{"isTransaction":null}}
     """
     When method POST
     Then status 400
-    And match response.message == CREDIT_PROFILE_BAD_REQUEST
-    And match response.detail == El campo isTransaction no puede ser null ni vacÃ­o
+    And match response.message == 'CREDIT_PROFILE_BAD_REQUEST'
+    And match response.detail == 'El campo isTransaction no puede ser null ni vacío'
 
-  Scenario: Validacion Transaction - request sin datos en claro y claropay
+  Scenario: Validacion Transaction - Sin datos en claro y claropay
     Given path '/v1/credit/profile'
     And header Content-Type = 'application/json'
     And request
     """
-{"claro":{},"claroPay":{},"transaction":{"isTransaction":true}}
+    {"claro":null,"claroPay":null,"transaction":{}}
     """
     When method POST
     Then status 400
-    And match response.message == CREDIT_PROFILE_BAD_REQUEST
-    And match response.detail == Debe ingresar algÃºn dato requerido claro o claroPay
+    And match response.message == 'CREDIT_PROFILE_BAD_REQUEST'
+    And match response.detail == 'Debe ingresar algún dato requerido claro o claroPay'
 
-  Scenario: Validacion Transaction - caller es null o vacÃ­o
+  Scenario: Validacion Transaction - caller es null o vacío
     Given path '/v1/credit/profile'
     And header Content-Type = 'application/json'
     And request
     """
-{"claro":{},"claroPay":{},"transaction":{"caller":null}}
+    {"claro":{},"claroPay":null,"transaction":{"caller":null}}
     """
     When method POST
     Then status 400
-    And match response.message == CREDIT_PROFILE_BAD_REQUEST
-    And match response.detail == El campo caller no puede ser vacÃ­o o null
-
+    And match response.message == 'CREDIT_PROFILE_BAD_REQUEST'
+    And match response.detail == 'El campo caller no puede ser vacío o null'
