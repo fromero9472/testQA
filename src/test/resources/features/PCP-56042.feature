@@ -62,7 +62,7 @@ Feature: PCP-56042 - Validaciones request POST /v1/credit/profile
         "channelId": 1,
         "caller": "texto",
         "originId": 1,
-        "isTransaction": false
+        "isTransaction": true
       }
     }
     """
@@ -130,7 +130,6 @@ Feature: PCP-56042 - Validaciones request POST /v1/credit/profile
       "claro": {
         "nim": "abc123"
       },
-      "claroPay": null,
       "transaction": {
         "channelId": 1,
         "caller": "texto",

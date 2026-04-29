@@ -42,27 +42,94 @@ function ensureEvidenceDir() {
   }
 }
 
+function cleanupPreviousRunArtifacts() {
+  try {
+    const surefireDir = path.join(RUNNER_PATH, 'target', 'surefire-reports');
+    if (fs.existsSync(surefireDir)) {
+      fs.readdirSync(surefireDir).forEach((file) => {
+        if (file.endsWith('.xml') || file.endsWith('.txt')) {
+          fs.unlinkSync(path.join(surefireDir, file));
+        }
+      });
+    }
+  } catch (err) {
+    console.warn('No se pudieron limpiar artifacts previos de surefire:', err.message);
+  }
+}
+
+function parseScenarioRefFromName(name = '') {
+  const raw = String(name || '').trim();
+  const match = raw.match(/^\[(\d+):(\d+)\]\s*(.*)$/);
+  if (!match) return { scenarioIndex: null, scenarioLine: null, cleanName: raw };
+  return {
+    scenarioIndex: Number(match[1]),
+    scenarioLine: Number(match[2]),
+    cleanName: String(match[3] || '').trim(),
+  };
+}
+
+function extractExpectedStepsFromFeature(featurePath, scenarioLine) {
+  try {
+    if (!featurePath || !scenarioLine || scenarioLine < 1) return { expectedStatus: null, assertions: [] };
+    const full = path.normalize(path.join(FEATURES_DIR, featurePath));
+    if (!full.startsWith(path.normalize(FEATURES_DIR)) || !fs.existsSync(full)) {
+      return { expectedStatus: null, assertions: [] };
+    }
+    const lines = fs.readFileSync(full, 'utf8').split(/\r?\n/);
+    const start = Number(scenarioLine) - 1;
+    if (start < 0 || start >= lines.length) return { expectedStatus: null, assertions: [] };
+
+    const assertions = [];
+    let expectedStatus = null;
+    for (let i = start + 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (/^\s*Scenario(?: Outline)?:/i.test(line)) break;
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      const statusMatch = trimmed.match(/^Then\s+status\s+(\d{3})/i);
+      if (statusMatch) {
+        expectedStatus = Number(statusMatch[1]);
+        assertions.push(trimmed);
+        continue;
+      }
+      if (/^(Then|And)\s+match\s+/i.test(trimmed)) {
+        assertions.push(trimmed);
+      }
+    }
+    return { expectedStatus, assertions };
+  } catch {
+    return { expectedStatus: null, assertions: [] };
+  }
+}
+
 function toScenarioFromJunit(testcase, index) {
+  const scenarioRef = parseScenarioRefFromName(testcase.name);
+  const expectedFromFeature = extractExpectedStepsFromFeature(testcase.featurePath, scenarioRef.scenarioLine);
+  const mergedAssertions = (Array.isArray(testcase.assertions) ? testcase.assertions : []).length > 0
+    ? testcase.assertions
+    : expectedFromFeature.assertions;
+
   return {
     id: `scenario-${index + 1}`,
     index: index + 1,
-    name: testcase.name || 'Unknown',
+    name: scenarioRef.cleanName || testcase.name || 'Unknown',
     status: (testcase.status || 'UNKNOWN').toUpperCase(),
     durationMs: testcase.durationMs || 0,
     tags: [],
     featureFile: testcase.classname || 'Sin datos',
-    line: null,
+    line: scenarioRef.scenarioLine || null,
     steps: [],
     http: {
       method: testcase.http?.method || null,
       url: testcase.http?.url || null,
-      expectedStatus: testcase.http?.expectedStatus ?? null,
+      expectedStatus: testcase.http?.expectedStatus ?? expectedFromFeature.expectedStatus ?? null,
       actualStatus: testcase.http?.actualStatus ?? null,
       headers: testcase.http?.headers || {},
       requestBody: testcase.http?.requestBody ?? null,
       responseBody: testcase.http?.responseBody ?? null,
     },
-    assertions: Array.isArray(testcase.assertions) ? testcase.assertions : [],
+    assertions: mergedAssertions,
     testData: {},
     logs: Array.isArray(testcase.logs) ? testcase.logs : [],
     db: testcase.db || { query: null, result: null },
@@ -78,7 +145,10 @@ function mapKarateReport(rawKarateJson, ctx = {}) {
   const scenariosFailed = Number(rawKarateJson?.scenariosFailed || rawKarateJson?.scenariosfailed || 0);
   const scenariosSkipped = Number(rawKarateJson?.scenariosSkipped || 0);
   const total = scenariosPassed + scenariosFailed + scenariosSkipped;
-  const durationMs = Math.round(Number(rawKarateJson?.elapsedTime || 0) * 1000);
+  const seconds = Number(
+    rawKarateJson?.totalTime ?? rawKarateJson?.elapsedTime ?? 0
+  );
+  const durationMs = Math.round((Number.isFinite(seconds) ? seconds : 0) * 1000);
   const finishedAt = new Date().toISOString();
   const startedAt = ctx.startedAt || finishedAt;
   const executionId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -484,19 +554,26 @@ app.post('/run', (req, res) => {
       args.push(`-D${safeKey}=${String(value)}`);
     });
   }
+  const safeScenarioLine = Number.isInteger(Number(scenarioLine)) && Number(scenarioLine) > 0
+    ? Number(scenarioLine)
+    : null;
+
   if (featurePath) {
-    const featureOption = Number.isInteger(Number(scenarioLine))
-      ? `classpath:features/${featurePath}:${Number(scenarioLine)}`
+    const featureOption = safeScenarioLine
+      ? `classpath:features/${featurePath}:${safeScenarioLine}`
       : `classpath:features/${featurePath}`;
     args.push(`-Dkarate.options=${featureOption}`);
   }
+
+  // Evita mezclar escenarios/reportes de corridas anteriores.
+  cleanupPreviousRunArtifacts();
 
   send('info', `🚀 ${MAVEN_CMD} ${args.join(' ')}`);
   send('info', `📁 ${RUNNER_PATH}`);
   send('info', `🌍 Ambiente: ${env}`);
   send('info', `🔗 BaseURL: ${baseUrl || 'Sin especificar'}`);
-  if (featurePath && Number.isInteger(Number(scenarioLine))) {
-    send('info', `🎯 Escenario puntual: línea ${Number(scenarioLine)}`);
+  if (featurePath && safeScenarioLine) {
+    send('info', `🎯 Escenario puntual: línea ${safeScenarioLine}`);
   }
   if (RUNNER_JAVA_HOME) send('info', `☕ JAVA_HOME: ${RUNNER_JAVA_HOME}`);
   if (RUNNER_MAVEN_HOME) send('info', `🧰 MAVEN_HOME: ${RUNNER_MAVEN_HOME}`);
@@ -566,7 +643,10 @@ app.post('/run', (req, res) => {
           send('log', `📊 JUnit testcases encontrados: ${junitTestcases.length}`);
           if (junitTestcases.length > 0) {
             send('log', `✅ Primer testcase: ${junitTestcases[0].name}`);
-            summary.scenarios = junitTestcases.map((tc, i) => toScenarioFromJunit(tc, i));
+            summary.scenarios = junitTestcases.map((tc, i) => toScenarioFromJunit({
+              ...tc,
+              featurePath: featurePath || null,
+            }, i));
             send('log', `✅ Scenarios mapeados: ${summary.scenarios.length}`);
           } else {
             send('log', `⚠️ No se encontraron testcases en el XML`);

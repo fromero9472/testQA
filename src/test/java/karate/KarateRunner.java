@@ -16,29 +16,11 @@ import org.junit.jupiter.api.DisplayName;
 public class KarateRunner {
 
     @Karate.Test
-    @DisplayName("PCP-47042")
-    @Story("PCP-47042")
-    @Issue("PCP-47042")
+    @DisplayName("Karate Dynamic Runner")
+    @Story("DYNAMIC")
+    @Issue("DYNAMIC")
     @Severity(SeverityLevel.CRITICAL)
-    Karate PCP_47042() {
-        return Karate.run("classpath:features/PCP-47042.feature");
-    }
-
-    @Karate.Test
-    @DisplayName("PCP-49054")
-    @Story("PCP-49054")
-    @Issue("PCP-49054")
-    @Severity(SeverityLevel.CRITICAL)
-    Karate PCP_49054() {
-        return Karate.run("classpath:features/PCP-49054.feature");
-    }
-
-    @Karate.Test
-    @DisplayName("PCP-54734 - History Credit Profile Batch")
-    @Story("PCP-54734")
-    @Issue("PCP-54734")
-    @Severity(SeverityLevel.NORMAL)
-    Karate PCP_54734() {
-        return Karate.run("classpath:features/PCP-54734.feature");
+    Karate runSelectedFeature() {
+        return Karate.run().relativeTo(getClass());
     }
 }
